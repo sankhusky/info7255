@@ -1,6 +1,10 @@
 package com.sanket.springboot.controller;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Stack;
 import java.util.UUID;
@@ -8,7 +12,12 @@ import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.ProcessingException;
 
+import org.everit.json.schema.Schema;
+import org.everit.json.schema.loader.SchemaLoader;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,9 +30,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.sanket.springboot.service.PlanService;
+
+import net.minidev.json.parser.JSONParser;
 
 
 
@@ -70,11 +79,11 @@ public class MainController {
 	    }
 	 
 	 @PostMapping(path = "/plan", consumes = "application/json")
-	    public ResponseEntity addPlan(@RequestHeader HttpHeaders reqHeader, @RequestBody Object body, HttpServletResponse response) throws IOException, ProcessingException, Exception {
+	    public ResponseEntity addPlan(@RequestHeader HttpHeaders reqHeader, @RequestBody String body, HttpServletResponse response) throws IOException, ProcessingException, Exception {
 
 	        Boolean isSchemaValid = false;
 //	        String jsonValueString = body;
-//	        File schemaFile = new ClassPathResource("./static/applicationSchema.json").getFile();
+	        File schemaFile = new ClassPathResource("./static/schema.json").getFile();
 
 	        //Validate if the incoming data is in sync with json schema
 //	        final JsonSchema jsonSchema = ValidationsUtil.getSchemaNode(schemaFile);
@@ -83,6 +92,14 @@ public class MainController {
 //	        if (ValidationsUtil.isJsonValid(jsonSchema, jsonNode)) {
 	            isSchemaValid = true;
 //	        }
+//	            InputStream targetStream = new ByteArrayInputStream(body.toString().getBytes());
+	            JSONObject jsonSchema = new JSONObject(
+	            	      new JSONTokener(new FileInputStream(schemaFile)));
+	            	    JSONObject jsonSubject =new JSONObject(body);
+	            	     
+	            	    Schema schema = SchemaLoader.load(jsonSchema);
+	            	    schema.validate(jsonSubject);
+	            	    
 	            planService.save(body);
 	            return new ResponseEntity<Object>(body, HttpStatus.CREATED);
 //
