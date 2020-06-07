@@ -32,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.sanket.springboot.service.PlanService;
 
+import io.micrometer.core.instrument.config.validate.ValidationException;
 import net.minidev.json.parser.JSONParser;
 
 
@@ -90,15 +91,22 @@ public class MainController {
 //	        final JsonNode jsonNode = ValidationsUtil.getJsonNode(jsonValueString);
 
 //	        if (ValidationsUtil.isJsonValid(jsonSchema, jsonNode)) {
-	            isSchemaValid = true;
+//	            isSchemaValid = true;
 //	        }
-//	            InputStream targetStream = new ByteArrayInputStream(body.toString().getBytes());
-	            JSONObject jsonSchema = new JSONObject(
-	            	      new JSONTokener(new FileInputStream(schemaFile)));
-	            	    JSONObject jsonSubject =new JSONObject(body);
-	            	     
-	            	    Schema schema = SchemaLoader.load(jsonSchema);
-	            	    schema.validate(jsonSubject);
+
+	            
+	            	    
+	            	    try {
+	            	    	
+	            	    	JSONObject jsonSchema = new JSONObject(
+	      	            	      new JSONTokener(new FileInputStream(schemaFile)));
+	      	            	    JSONObject jsonSubject =new JSONObject(body);
+	      	            	    Schema schema = SchemaLoader.load(jsonSchema);
+	      	            	    schema.validate(jsonSubject);
+	            	    }catch(ValidationException ve) {
+	            	    	return new ResponseEntity<String>("{"
+	            	    			+ "\"error\":\""+ve.getMessage()+"\"}", HttpStatus.BAD_REQUEST);
+	            	    }
 	            	    
 	            planService.save(body);
 	            return new ResponseEntity<Object>(body, HttpStatus.CREATED);
