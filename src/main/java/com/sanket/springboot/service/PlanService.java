@@ -5,10 +5,15 @@ import java.util.UUID;
 
 import javax.ws.rs.NotFoundException;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
+
+import com.google.gson.Gson;
 
 
 
@@ -40,7 +45,14 @@ public class PlanService {
 //		JSONObject json = new JSONObject();
 //		json.
 //		obj.setId(UUID.randomUUID().toString());
-		getValueOperations().set(getRedisKey(UUID.randomUUID().toString()), obj);
+		String json = new Gson().toJson(obj);
+		try {
+	        json = new JSONTokener(json).nextValue().toString();
+	    } catch (JSONException e) {
+	        e.printStackTrace();
+	    }		
+		JSONObject jsonObj = new JSONObject(json);
+		getValueOperations().set(getRedisKey(jsonObj.getString("objectId")), obj);
 	}
 	
 	
