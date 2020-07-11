@@ -25,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -231,14 +232,96 @@ public class MainController {
 	            String randomUUIDString = uuid.toString();
 	            System.out.println(randomUUIDString);
 	            eTagStack.push("\""+randomUUIDString + "\"");
-	            planService.save(body);
+	            planService.save(body,planId);
 	             return new ResponseEntity<String>("{"
-    	    			+ "\"msg\":\"JSON instance updated in redis\"}", HttpStatus.OK);
+    	    			+ "\"msg\":\"JSON data updated in redis\"}", HttpStatus.OK);
 //	            return  ResponseEntity.status(HttpStatus.NO_CONTENT).eTag(randomUUIDString).body("\"Updated\":\"JSON instance updated in redis\"");
 	            //return new ResponseEntity<String>("JSON data updated in redis", HttpStatus.NO_CONTENT);
 
 //	        }else
 //	            throw new InvalidInputExceptions("JSON Schema is invalid");
+	    }
+	 
+	 
+	 @PatchMapping("/plan/{planId}")
+	    public ResponseEntity<String> patchUpdate(@RequestBody(required=true) String body, @RequestHeader Map<String,String> reqHeaderMap, @RequestHeader HttpHeaders reqHeader, @PathVariable String planId) throws IOException, ProcessingException {
+
+		 String idTokenString = reqHeaderMap.get("authorization");
+		 if(idTokenString!=null) {
+			 idTokenString = idTokenString.split(" ").length>1 ? idTokenString.split(" ")[1] : idTokenString;
+			 idTokenString = idTokenString.trim();
+		 }
+		 
+//		 idTokenString = "eyJhbGciOiJSUzI1NiIsImtpZCI6IjY1YjNmZWFhZDlkYjBmMzhiMWI0YWI5NDU1M2ZmMTdkZTRkZDRkNDkiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJhY2NvdW50cy5nb29nbGUuY29tIiwiYXpwIjoiNDc5OTk1NDY4NjMta2tsbHN0ZmVrcXVwamhpc2w2bWVkaDA5Mm04bnZibWMuYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCJhdWQiOiI0Nzk5OTU0Njg2My1ra2xsc3RmZWtxdXBqaGlzbDZtZWRoMDkybThudmJtYy5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsInN1YiI6IjEwOTU4NTMxNDMyMDc2NTY0MTg1MCIsImF0X2hhc2giOiJGMDdFd3IydG1UOWc0cGZmODZndUlRIiwiaWF0IjoxNTk0NDUxNTQ5LCJleHAiOjE1OTQ0NTUxNDl9.B_On55MBbD7kKFGH-s3zFG7ufNFrST-u-20nJ71VawPFn7SA2ZT1-UCo1lfsSpD1yIj5l7Jm8-dBnorLwcvgm7-Z1Wa5psX9LEvFEYd0yURF9POr_Qvx37V8Um6zTxvqrl6Z6poj0AqTOrulCSGNNRMOLCRf-ajqyVT7UdxphK-G70ZrSCQkHMB1XFR-Y-AdJdjnJ7ErzMZ4O3qKfb_DJ_1WSD6d_HCKCsfePPX5d3sjBFSbY0CwjuO47Q9ZQjVqWTU3kTJHFWCb7YeNtfnRLES0RH-OCj4yblaGXvC8yPKN50XDsq0Bf7RQYPtJ70i-u6961ZmjwU4y2a3e47UssQ";
+		 GoogleIdTokenVerifier verifier = null;
+		try {
+			verifier = new GoogleIdTokenVerifier.Builder(GoogleNetHttpTransport.newTrustedTransport(), JacksonFactory.getDefaultInstance())
+					    // Specify the CLIENT_ID of the app that accesses the backend:
+					    .setAudience(Collections.singletonList(CLIENT_ID))
+					    // Or, if multiple clients access the backend:
+					    //.setAudience(Arrays.asList(CLIENT_ID_1, CLIENT_ID_2, CLIENT_ID_3))
+					    .build();
+		} catch (GeneralSecurityException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+				// (Receive idTokenString by HTTPS POST)
+
+		 GoogleIdToken idToken=null;
+		 try {
+				 idToken = verifier.verify(idTokenString);
+		 }catch(Exception e) {
+			 e.printStackTrace();
+		 }
+				if (idToken != null) {
+				  Payload payload = idToken.getPayload();
+
+				  // Print user identifier
+				  String userId = payload.getSubject();
+				  System.out.println("User ID: " + userId);
+				} else {
+					System.out.println("Invalid ID token.");
+					return new ResponseEntity<String>("{"
+     	    			+ "\"error\":\""+"Unable to verify token"+"\"}", HttpStatus.UNAUTHORIZED);
+				}
+		 
+		/*--------------------------*/
+	     
+	        String ifMatchValue = reqHeader.getFirst("if-match");
+
+	        if(ifMatchValue != null && ifMatchValue.length()>0) {
+	            if (eTagStack.size() > 0 && !(eTagStack.peek().equals(ifMatchValue)))
+	                return ResponseEntity.status(HttpStatus.PRECONDITION_FAILED).body("Resource has been modified please GET first for new Etag");
+	        }
+
+//	        //If token is verified retrieve json schema
+//	        Boolean isSchemaValid = false;
+//	        String jsonValueString = body;
+//	        File schemaFile = new ClassPathResource("./static/schema.json").getFile();
+//
+//	          	            	    
+//	            	    try {
+//	            	    	
+//	            	    	JSONObject jsonSchema = new JSONObject(
+//	      	            	      new JSONTokener(new FileInputStream(schemaFile)));
+//	      	            	    JSONObject jsonSubject =new JSONObject(body);
+//	      	            	    Schema schema = SchemaLoader.load(jsonSchema);
+//	      	            	    schema.validate(jsonSubject);
+//	            	    }catch(ValidationException ve) {
+//	            	    	return new ResponseEntity<String>("{"
+//	            	    			+ "\"error\":\""+ve.getMessage()+"\"}", HttpStatus.BAD_REQUEST);
+//	            	    }
+//	            	    
+	            
+	            UUID uuid = UUID.randomUUID();
+	            String randomUUIDString = uuid.toString();
+	            System.out.println(randomUUIDString);
+	            eTagStack.push("\""+randomUUIDString + "\"");
+	            planService.update(body,planId);
+	             return new ResponseEntity<String>("{"
+ 	    			+ "\"msg\":\"JSON data PATCHED in redis\"}", HttpStatus.OK);
+
 	    }
 	 
 	 @DeleteMapping("/plan/{planId}")
