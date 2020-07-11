@@ -34,7 +34,7 @@ public class PlanService {
 		return getValueOperations().multiGet(objTemplate.keys(getRedisKey(pattern)));
 	}
 	public Object findById(final String planId) {
-		final Object plan = getValueOperations().get(getRedisKey(UUID.fromString(planId).toString()));
+		final Object plan = getValueOperations().get(planId);
 		if(plan == null) {
 			throw new NotFoundException("Plan does not exist in the DB");
 		}
@@ -52,7 +52,7 @@ public class PlanService {
 	        e.printStackTrace();
 	    }		
 		JSONObject jsonObj = new JSONObject(json);
-		getValueOperations().set(getRedisKey(jsonObj.getString("objectId")), obj);
+		getValueOperations().set(jsonObj.getString("objectId"), obj);
 	}
 	
 	
